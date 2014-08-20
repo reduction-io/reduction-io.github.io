@@ -1,0 +1,73 @@
+
+why is this worse is better?
+Simplicity-the design must be simple, both in implementation and interface. It
+is more important for the implementation to be simple than the interface.
+Simplicity is the most important consideration in a design.
+
+Correctness-the design must be correct in all observable aspects. It is
+slightly better to be simple than correct.
+
+Consistency-the design must not be overly inconsistent. Consistency can be
+sacrificed for simplicity in some cases, but it is better to drop those parts
+of the design that deal with less common circumstances than to introduce either
+implementational complexity or inconsistency.
+
+Completeness-the design must cover as many important situations as is
+practical. All reasonably expected cases should be covered. Completeness can be
+sacrificed in favor of any other quality. In fact, completeness must sacrificed
+whenever implementation simplicity is jeopardized. Consistency can be
+sacrificed to achieve completeness if simplicity is retained; especially
+worthless is consistency of interface.
+
+Node is a Programming System
+
+The Go programming language was conceived in late 2007 as an answer to some of
+the problems we were seeing developing software infrastructure at Google. The
+computing landscape today is almost unrelated to the environment in which the
+languages being used, mostly C++, Java, and Python, had been created. The
+problems introduced by multicore processors, networked systems, massive
+computation clusters, and the web programming model were being worked around
+rather than addressed head-on. Moreover, the scale has changed: today's server
+programs comprise tens of millions of lines of code, are worked on by hundreds
+or even thousands of programmers, and are updated literally every day. To make
+matters worse, build times, even on large compilation clusters, have stretched
+to many minutes, even hours.
+
+Go was designed and developed to make working in this environment more
+productive. Besides its better-known aspects such as built-in concurrency and
+garbage collection, Go's design considerations include rigorous dependency
+management, the adaptability of software architecture as systems grow, and
+robustness across the boundaries between components.
+
+Go is a Programming System.
+
+Some examples:
+Language, Editor, OS, Packaging, Monitoring, Debugging, Compiling, Testing,
+Verification, Collaboration, Source Control.
+
+LISP, emacs, lisp machines, CLOS, DSLs, explicit use of code as data, MIT, better is better.
+C, text editors, make, Unix, diff + patch, email, New Jersey, worse is better.
+Ruby, sublime, rake, os x, heroku, gem, git, Heroku, Rake, rails, web startups.
+Haskell, hackage, cabal, category theory, quickcheck.
+Objective-C, X Code, Cocoa Pods, iOS, OS X.
+Perl, CPAN, cgi-bin, unix, TMTOWTDI, system administration.
+Java, Maven, Eclipse, JUnit, Spring, design patterns, the enterprise.
+C#, .NET, Visual Studio, CodePlex,  Team Foundation Server, Windows, the enterprise.
+Go, gofmt, go, go get, godoc, TODO(chas), distributed systems.
+Javascript, web browsers, the DOM, selenium, HTML, CSS, UI.
+Javascript, node, npm, github.
+Erlang, TODO(chas) erlang stuff.
+
+Timeline:
+GNU Project started in '83, Miranda '85, Erlang '86, Worse is Better '89,
+Haskell '90, CERN httpd '91, GNU/Linux'92, WWW (CGI Start) '93, CPAN conception
+'93, Matt's Script Archive '95, Viaweb '95, Apache Web Server '95, PHP '95, ASP
+1.0 '96, Nagios '96, CGI RFC '97, CPAN web-accessible '97, Google '98,
+ASP 3.0 (dead) '00, Rails '05, Go (conception) '07, Node '09, Go (release) '09
+
+Node wins really heavily on packaging and easy onboarding, everyone knows JS,
+even people who would never do webbackend otherwise. (Echos of PHP)
+
+Go wins on concurrency, distributed systems, and easy building and packaging.
+
+The web is a foundationally worse-is-better platform. (The internet is too.)
