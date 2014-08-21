@@ -1,3 +1,6 @@
+---
+---
+
 <!-- This is massive and sprawling and needs to be cut down. Ruby seems to be
 a perfect example of a modern worse-is-better system as defined here, but I'm
 not sure I want to bring that in. -->
@@ -78,13 +81,13 @@ languages" let's think about "programming systems". When it comes to
 "programming", the system has become much more important than the language.
 
 Some examples:
-LISP, emacs, lisp machines, CLOS, DSLs, explicit use of code as data, MIT, better is better.
-C, text editors, make, Unix, diff + patch, email, New Jersey, worse is better.
-Haskell, hackage, cabal, category theory/algebra, quickcheck.
-Perl, CPAN, cgi-bin, unix, TMTOWTDI, system administration.
-Go, gofmt, go, go get, godoc, distributed systems.
-Javascript, web browsers, the DOM, selenium, HTML, CSS, UI.
-Javascript, node, npm, github, concurrent web services.
+-LISP, emacs, lisp machines, CLOS, DSLs, explicit use of code as data, MIT, better is better.
+-C, text editors, make, Unix, diff + patch, email, New Jersey, worse is better.
+-Haskell, hackage, cabal, category theory/algebra, quickcheck.
+-Perl, CPAN, cgi-bin, unix, TMTOWTDI, system administration.
+-Go, gofmt, go, go get, godoc, distributed systems.
+-Javascript, web browsers, the DOM, selenium, HTML, CSS, UI.
+-Javascript, node, npm, github, concurrent web services.
 
 DO INTRO BASED ONE WORSE IS WORSE ANALYSIS:
 -- default language on system
@@ -183,7 +186,8 @@ development and deployment story. Lots of available examples for copy-paste
 coding. (PHP's package manager is Google) Great documentation with
 user-contributed notes
 
-Worse is the Worst:
+Worse is the Worst
+==================
 Java and the JVM and how it became ubiquitous in
 enterprise development - strong deployment and monitoring tools, code
 maintenance via IDE. Also interesting because of the current reuse of the
