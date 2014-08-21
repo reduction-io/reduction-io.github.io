@@ -81,13 +81,13 @@ languages" let's think about "programming systems". When it comes to
 "programming", the system has become much more important than the language.
 
 Some examples:
--LISP, emacs, lisp machines, CLOS, DSLs, explicit use of code as data, MIT, better is better.
--C, text editors, make, Unix, diff + patch, email, New Jersey, worse is better.
--Haskell, hackage, cabal, category theory/algebra, quickcheck.
--Perl, CPAN, cgi-bin, unix, TMTOWTDI, system administration.
--Go, gofmt, go, go get, godoc, distributed systems.
--Javascript, web browsers, the DOM, selenium, HTML, CSS, UI.
--Javascript, node, npm, github, concurrent web services.
+- LISP, emacs, lisp machines, CLOS, DSLs, explicit use of code as data, MIT, better is better.
+- C, text editors, make, Unix, diff + patch, email, New Jersey, worse is better.
+- Haskell, hackage, cabal, category theory/algebra, quickcheck.
+- Perl, CPAN, cgi-bin, unix, TMTOWTDI, system administration.
+- Go, gofmt, go, go get, godoc, distributed systems.
+- Javascript, web browsers, the DOM, selenium, HTML, CSS, UI.
+- Javascript, node, npm, github, concurrent web services.
 
 DO INTRO BASED ONE WORSE IS WORSE ANALYSIS:
 -- default language on system
