@@ -161,24 +161,6 @@ Would you like to play? y/n: n</code></pre>
   <span class="n">getStdGen</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">gen</span> <span class="ow">-&gt;</span>
   <span class="n">gameLoop</span> <span class="p">(</span><span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span> <span class="n">gen</span><span class="p">)</span> <span class="mi">0</span> <span class="mi">0</span>
 </pre></div>
-<h3 id="differences">Differences</h3>
-<pre><code>gameLoop (x:y:r:values) right rounds = do                                              | gameLoop (x:y:r:values) right rounds =
-  flushPut &quot;Would you like to play? y/n: &quot;                                             |   flushPut &quot;Would you like to play? y/n: &quot; &gt;&gt;
-  keepPlaying &lt;- getLine                                                               |   getLine &gt;&gt;= \keepPlaying -&gt;
-  when (map toLower keepPlaying == &quot;y&quot;) $ do                                           |   when (map toLower keepPlaying == &quot;y&quot;) $
-    let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)               |   let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2) in
-    flushPut $ unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]                        |       flushPut (unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]) &gt;&gt;
-                                                                                       |       readLn &gt;&gt;= \response -&gt;
-    response &lt;- readLn                                                                 |       let (total, message) = if solution == response
-    let (total, message) = if solution == response                                     |           then (right + 1, &quot;Correct!&quot;)
-        then (right + 1, &quot;Correct!&quot;)                                                   |           else (right, unwords [&quot;Sorry! the correct answer is:&quot;, show solution]) in
-        else (right, unwords [&quot;Sorry! the correct answer is:&quot;, show solution])         |         putStrLn (unwords
-    putStrLn $ unwords                                                                 |           [message, &quot;\nYou have solved&quot;, show total, &quot;out of&quot;, show (rounds + 1)]) &gt;&gt;
-      [message, &quot;\nYou have solved&quot;, show total, &quot;out of&quot;, show (rounds + 1)]          |         gameLoop values total (rounds + 1)
-    gameLoop values total (rounds + 1)                                                 &lt;
-main = do                                                                              | main =
-  gen &lt;- getStdGen                                                                     |   getStdGen &gt;&gt;= \gen -&gt;
-</code></pre>
 <h2 id="pointfree-and">Pointfree and <code>&lt;$&gt;</code></h2>
 <p>This next version introduces use of the <code>&lt;$&gt;</code> function. It can be thought of as a <code>$</code> (function application) function that has been modified to work in more circumstances. The <code>$</code> function performs <a href="https://stackoverflow.com/questions/19521246/what-does-mean-do-in-haskell">low-precedence function application</a> so that things like <code>even (x + 3)</code> can be replaced with <code>even $ x + 3</code>. It takes a function from <code>a -&gt; b</code> and an <code>a</code>, which produces a <code>b</code> by calling the function with the provided <code>a</code>.</p>
 <div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
@@ -210,16 +192,6 @@ main = do                                                                       
   <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
   <span class="n">gameLoop</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span>
 </pre></div>
-<h3 id="differences-1">Differences</h3>
-<pre><code>                                                                                       &gt; import Control.Applicative
-  keepPlaying &lt;- getLine                                                               |   keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; getLine
-  when (map toLower keepPlaying == &quot;y&quot;) $ do                                           |   when keepPlaying $ do
-    response &lt;- readLn                                                                 |     correct &lt;- (solution ==) &lt;$&gt; readLn
-    let (total, message) = if solution == response                                     |     let (total, message) = if correct
-    flushPut s = putStr s &gt;&gt; hFlush stdout                                             |     flushPut = (&gt;&gt; hFlush stdout) . putStr
-  gen &lt;- getStdGen                                                                     |   randomValues &lt;- randomRs (1,100) &lt;$&gt; getStdGen
-  gameLoop (randomRs (1, 100) gen) 0 0                                                 |   gameLoop randomValues 0 0
-</code></pre>
 <p>It is very common to want to operate on values &quot;inside&quot; of another type. So if we take a normal function, such as <code>even</code>, we can directly call it on numbers (as in <code>even 3</code>), but we can't call it on values that represent possible failure such as <code>Maybe Int</code> because the <code>Int</code> may be mising. We can achieve this by performing all of our logic &quot;inside&quot; the failure type <code>Maybe a</code>. Correctly operating &quot;inside&quot; of a type representing failure means that if the type passed to the function represents failure, the return value of the function also represents failure. In this case, we have a type of <code>Maybe Integer</code> and a function <code>even :: Integer -&gt; Bool</code> which doesn't know or care about the possibility of failure elsewhere in the system because <code>Integer</code> can't fail, it can only be even or not even. To complete the example, calling <code>even</code> on a possibly missing integer looks like <code>even &lt;$&gt; Just 3</code> or <code>even &lt;$&gt; Nothing</code> which evaluate to <code>Just False</code> and <code>Nothing</code> respectively.</p>
 <p>These are the types of the function application functions for reference:</p>
 <div class="highlight"><pre>    <span class="p">(</span> <span class="o">$</span> <span class="p">)</span> <span class="ow">::</span>              <span class="p">(</span><span class="n">a</span> <span class="ow">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="ow">-&gt;</span>   <span class="n">a</span> <span class="ow">-&gt;</span>   <span class="n">b</span>
@@ -279,31 +251,6 @@ main = do                                                                       
   <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
   <span class="n">gameLoop</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">randomValues</span><span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span>  <span class="mi">0</span> <span class="p">}</span>
 </pre></div>
-<h3 id="differences-2">Differences</h3>
-<pre><code>gameLoop :: [Int] -&gt; Int -&gt; Int -&gt; IO ()                                               | data Game = Game { values :: [Int], right :: Int, rounds :: Int }
-gameLoop (x:y:r:values) right rounds = do                                              |
-                                                                                       &gt; updateGame :: Bool -&gt; Game -&gt; Game
-                                                                                       &gt; updateGame correct Game { values = (_:_:_:remaining)
-                                                                                       &gt;                         , right = score
-                                                                                       &gt;                         , rounds = total } =
-                                                                                       &gt;   Game { values = remaining
-                                                                                       &gt;        , right = if correct then score + 1 else score
-                                                                                       &gt;        , rounds = total + 1 }
-                                                                                       &gt;
-                                                                                       &gt; gameLoop :: Game -&gt; IO ()
-                                                                                       &gt; gameLoop gameState = do
-                                                                                       &gt;     let (x:y:r:_) = values gameState
-    let (total, message) = if correct                                                  |     let gameState&#39; = updateGame correct gameState
-        then (right + 1, &quot;Correct!&quot;)                                                   |     putStrLn $ if correct
-        else (right, unwords [&quot;Sorry! the correct answer is:&quot;, show solution])         |         then &quot;Correct!&quot;
-    putStrLn $ unwords                                                                 |         else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
-      [message, &quot;\nYou have solved&quot;, show total, &quot;out of&quot;, show (rounds + 1)]          |     putStr $ unwords
-    gameLoop values total (rounds + 1)                                                 |       [&quot;You have solved&quot;, show $ right gameState&#39;, &quot;out of&quot;,
-                                                                                       &gt;                           show $ rounds gameState&#39;, &quot;\n&quot;]
-                                                                                       &gt;     gameLoop gameState&#39;
-  gameLoop randomValues 0 0                                                            |   gameLoop Game { values = randomValues, right = 0, rounds =  0 }
-                                                                                       &gt;
-</code></pre>
 <p>This has the advantage of showing explicitly that the information passed to this function is all required for a single game, rather than coming from separate sources for separate aspects of the function. To follow this theme of concentrating state-specific code, I introduced an updateGame function which creates a new game record from an old one and the knowledge of whether the player won or lost.</p>
 <p>At this point, I think the machinery is starting to overwhelm the essential complexity of the problem and probably wouldn't write code like this for something so simple under other circumstances. It's generally a good idea to use records if you find yourself passing the same arguments to several functions in your program or if you are using tuples with some sort of implicit meaning e.g. as 2D vectors. They do have some syntactic overhead so I wouldn't normally use one for just one function like this.</p>
 <h2 id="statet">StateT</h2>
@@ -352,25 +299,6 @@ gameLoop (x:y:r:values) right rounds = do                                       
   <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
   <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
 </pre></div>
-<h3 id="differences-3">Differences</h3>
-<pre><code>                                                                                       &gt; import Control.Monad.State
-gameLoop :: Game -&gt; IO ()                                                              | gameLoop :: StateT Game IO ()
-gameLoop gameState = do                                                                | gameLoop = do
-  keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; getLine                                    |   keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; liftIO getLine
-    let (x:y:r:_) = values gameState                                                   |     (x:y:r:_) &lt;- gets values
-    correct &lt;- (solution ==) &lt;$&gt; readLn                                                |     correct &lt;- (solution ==) &lt;$&gt; liftIO readLn
-    let gameState&#39; = updateGame correct gameState                                      |     modify (updateGame correct)
-    putStrLn $ if correct                                                              |     gameState&#39; &lt;- get
-        then &quot;Correct!&quot;                                                                |     liftIO . putStrLn $ if correct
-        else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]                  |       then &quot;Correct!&quot;
-    putStr $ unwords                                                                   |       else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
-                                                                                       &gt;     liftIO . putStrLn $ unwords
-                          show $ rounds gameState&#39;, &quot;\n&quot;]                              |                           show $ rounds gameState&#39;]
-    gameLoop gameState&#39;                                                                |     gameLoop
-    flushPut = (&gt;&gt; hFlush stdout) . putStr                                             |     flushPut = liftIO . (&gt;&gt; hFlush stdout) . putStr
-  gameLoop Game { values = randomValues, right = 0, rounds =  0 }                      |   evalStateT gameLoop (Game randomValues 0 0)
-                                                                                       &gt;
-</code></pre>
 <p>Most interesting programs that involve interaction require some amount of state to persist throughout their execution. As we previously saw, we can thread this state through an unbounded number of recursive calls to the same function in order to simulate a persistent state using only stateless functions. It can be tedious to explicitly pass additional extraneous variables to each function that needs the state, but we can take advantage of the fact that do-nation is strictly syntactic sugar over the <code>&gt;&gt;=</code> operator from the Monad typeclass, and use it to thread our state record <code>Game</code> around for us. The type connected to the implicit passing of a state type is suitably called State.</p>
 <p>Previously, all do-notation was syntactic sugar for manipulation values of type <code>IO</code>. We would like to keep doing I/O in this program, so I don't want to <em>completely</em> replace the <code>IO</code> sugar with <code>State</code> sugar. Instead, I use a type called <code>StateT</code> to wrap the <code>IO</code> type and produce a <code>StateT Game IO ()</code>. After this conversion is done, the <code>gameLoop :: Game -&gt; IO ()</code> function no longer takes any explicit parameters and instead is a stateful value that holds a <code>Game</code> state and can perform I/O, to write it in Haskell: <code>gameLoop :: StateT Game IO ()</code>. <a href="http://book.realworldhaskell.org/read/monad-transformers.html">In larger applications several monad transformers are frequently stacked together.</a></p>
 <p>In general, the transformation from <code>IO</code> to <code>StateT Game IO</code> is extremely mechanical, I just added a <code>liftIO</code> function to each function that returns <code>IO</code> and made the types line up. The usual disclaimer about the low essential complexity of the problem applies here too. Using <code>State</code> and <code>StateT</code> to manage &quot;mutable&quot; state can be a good fit if you have a large number of functions that operate on the same state such a collection of parsing functions which update a shared symbol table. In addition, actual state mutation is available in the form of <a href="https://wiki.haskell.org/Monad/ST"><code>ST</code></a> if you want mutable state as a performance optimization. That said, implicitly passing state between functions can make them harder to understand, debug, and compose.</p>
@@ -437,32 +365,6 @@ in this example:</p>
   <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">randomValues</span> <span class="ow">-&gt;</span>
   <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">randomValues</span><span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="mi">0</span> <span class="p">}</span>
 </pre></div>
-<h3 id="differences-4">Differences</h3>
-<pre><code>       , right = if correct then score + 1 else score                                  |        , rounds = total + 1
-       , rounds = total + 1 }                                                          |        , right = if correct then score + 1 else score }
-gameLoop = do                                                                          | gameLoop =
-  flushPut &quot;Would you like to play? y/n: &quot;                                             |   flushPut &quot;Would you like to play? y/n: &quot; &gt;&gt;
-  keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; liftIO getLine                             |   (&quot;y&quot; ==) . map toLower &lt;$&gt; liftIO getLine &gt;&gt;= \keepPlaying -&gt;
-  when keepPlaying $ do                                                                |   when keepPlaying $
-    (x:y:r:_) &lt;- gets values                                                           |     gets values &gt;&gt;= \(x:y:r:_) -&gt;
-    let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)               |     let (solution, opStr) = [(x + y, &quot;+&quot;), (x - y, &quot;-&quot;)] !! (r `mod` 2) in
-    flushPut $ unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]                        |       flushPut (unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]) &gt;&gt;
-    correct &lt;- (solution ==) &lt;$&gt; liftIO readLn                                         |       (solution ==) &lt;$&gt; liftIO readLn &gt;&gt;= \correct -&gt;
-    modify (updateGame correct)                                                        |       modify (updateGame correct) &gt;&gt; get &gt;&gt;= \game -&gt;
-    gameState&#39; &lt;- get                                                                  |       (liftIO . putStrLn) (unwords [message solution correct,
-    liftIO . putStrLn $ if correct                                                     |         &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]) &gt;&gt;
-      then &quot;Correct!&quot;                                                                  |       gameLoop
-      else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]                    &lt;
-    liftIO . putStrLn $ unwords                                                        &lt;
-      [&quot;You have solved&quot;, show $ right gameState&#39;, &quot;out of&quot;,                           &lt;
-                          show $ rounds gameState&#39;]                                    &lt;
-    gameLoop                                                                           &lt;
-                                                                                       &gt;     message _ True = &quot;Correct!&quot;
-                                                                                       &gt;     message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
-main = do                                                                              | main =
-  randomValues &lt;- randomRs (1,100) &lt;$&gt; getStdGen                                       |   randomRs (1,100) &lt;$&gt; getStdGen &gt;&gt;= \randomValues -&gt;
-  evalStateT gameLoop (Game randomValues 0 0)                                          |   evalStateT gameLoop Game { values = randomValues, right = 0, rounds = 0 }
-</code></pre>
 <h2 id="statet-clean-up"><code>StateT</code> Clean-up</h2>
 <p>This is another minor clean-up version, but shows a couple of common (and not particularly arcane) practices.</p>
 <div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
@@ -506,21 +408,6 @@ main = do                                                                       
   <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
   <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
 </pre></div>
-<h3 id="differences-5">Differences</h3>
-<pre><code>       , right = if correct then score + 1 else score                                  |        , rounds = total + 1
-       , rounds = total + 1 }                                                          |        , right = if correct then score + 1 else score }
-    let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)               |     let (solution, opStr) = [(x + y, &quot;+&quot;), (x - y, &quot;-&quot;)] !! (r `mod` 2)
-    modify (updateGame correct)                                                        |     game &lt;- modify (updateGame correct) &gt;&gt; get
-    gameState&#39; &lt;- get                                                                  |     liftIO . putStrLn $ unwords [message solution correct,
-    liftIO . putStrLn $ if correct                                                     |       &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]
-      then &quot;Correct!&quot;                                                                  &lt;
-      else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]                    &lt;
-    liftIO . putStrLn $ unwords                                                        &lt;
-      [&quot;You have solved&quot;, show $ right gameState&#39;, &quot;out of&quot;,                           &lt;
-                          show $ rounds gameState&#39;]                                    &lt;
-                                                                                       &gt;     message _ True = &quot;Correct!&quot;
-                                                                                       &gt;     message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
-</code></pre>
 <p>I extracted a function from the if-expression because I think it's a bit more straightforward and compact and does a better job of breaking up the logical portion of the program.</p>
 <pre><code>- liftIO . putStrLn $ if correct
 -     then &quot;Correct!&quot;
@@ -580,22 +467,6 @@ I chose to make this explicit rather than using the do-notation sugar to reflect
   <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
   <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
 </pre></div>
-<h3 id="differences-6">Differences</h3>
-<pre><code>                                                                                       &gt; {-# LANGUAGE TemplateHaskell #-}
-                                                                                       &gt; import Control.Lens hiding (op)
-data Game = Game { values :: [Int], right :: Int, rounds :: Int }                      | data Game = Game { _values :: [Int], _right :: Int, _rounds :: Int }
-                                                                                       &gt; makeLenses &#39;&#39;Game
-updateGame correct Game { values = (_:_:_:remaining)                                   | updateGame correct =
-                        , right = score                                                |     (values %~ drop 3) .
-                        , rounds = total } =                                           |     (rounds +~ 1) .
-  Game { values = remaining                                                            |     (right +~ if correct then 1 else 0)
-       , rounds = total + 1                                                            &lt;
-       , right = if correct then score + 1 else score }                                &lt;
-    (x:y:r:_) &lt;- gets values                                                           |     (x:y:r:_) &lt;- use values
-    let (solution, opStr) = [(x + y, &quot;+&quot;), (x - y, &quot;-&quot;)] !! (r `mod` 2)                |     let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)
-      &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]            |       &quot;\nYou have solved&quot;, show $ game ^. right, &quot;out of&quot;, show $ game ^. rounds]
-                                                                                       &lt;
-</code></pre>
 <p>All of the functions provided by <a href="https://hackage.haskell.org/package/lens"><code>lens</code></a> work using a type of generalized getter/setter functions called lenses. (Note: If this idea is interesting to you, but you don't want all of the bells and whistles in <code>lens</code>, there are other, simpler lens libraries that use the same representation as <code>lens</code>, such as <a href="https://hackage.haskell.org/package/lens-family"><code>lens-family</code></a>.) Lenses are extremely mechanical to produce for standard data types, so it includes some Template Haskell functions which will write them for you. Normally Haskell provides projection functions when you write a record which are named after the record fields (e.g. <code>rounds :: Game -&gt; Int</code>), so we start the names of record members with underscores so generated lenses won't conflict.</p>
 <p>After converting to using lenses for field access, anything that touched the game state needs to be rewritten to use the new combinators. I think this does simplify the updateGame function, but the logic around printing becomes slightly worse.</p>
 <p>The updateGame function previously used pattern matching to take apart the Game value and put it back together again. The version using lenses instead constructs three modification functions of type <code>Game -&gt; Game</code> and composes them together using <code>.</code> (This is the same pipeline technique that was discussed in the context of flushPut). What goes into updateGame? We need to remove the first two random values because they were used for the last problem, we need to unconditionally increment the number of rounds, and if the user got the last problem correct, we should increment the number right. Let's look at each part separately because we know they don't interact due to their construction as composed functions.</p>
@@ -675,23 +546,6 @@ updateGame correct Game { values = (_:_:_:remaining)                            
   <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
   <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
 </pre></div>
-<h3 id="differences-7">Differences</h3>
-<pre><code>updateGame :: Bool -&gt; Game -&gt; Game                                                     &lt;
-updateGame correct =                                                                   &lt;
-    (values %~ drop 3) .                                                               &lt;
-    (rounds +~ 1) .                                                                    &lt;
-    (right +~ if correct then 1 else 0)                                                &lt;
-                                                                                       &lt;
-    (x:y:r:_) &lt;- use values                                                            |     (x:y:r:_) &lt;- values &lt;&lt;%= drop 3
-                                                                                       &gt;     numRounds &lt;- rounds &lt;+= 1
-                                                                                       &gt;
-                                                                                       &lt;
-    game &lt;- modify (updateGame correct) &gt;&gt; get                                         |     numRight &lt;- right &lt;+= if correct then 1 else 0
-                                                                                       &gt;
-      &quot;\nYou have solved&quot;, show $ game ^. right, &quot;out of&quot;, show $ game ^. rounds]      |       &quot;\nYou have solved&quot;, show numRight, &quot;out of&quot;, show numRounds]
-    message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]      |     message soln _ = unwords [&quot;Sorry! the correct answer is:&quot;, show soln]
-                                                                                       &gt;
-</code></pre>
 <p>This approach explicitly states what can be manipulated and centralizes it into one type like in traditional (or more explicit) programming with stateless functions, but it uses Haskell library features to implicitly update the state as it's passed around.</p>
 <p>Understanding the new code requires knowing two more pieces of lens operator grammar: just as any stateless update operator ends in <code>~</code>, stateful update operators end in <code>=</code> and update an ambient state. In our case this state type is <code>StateT Game IO ()</code>. What this means is that if you would write <code>i += 1</code> to update the value of a variable in an imperative language, you can use <code>i += 1</code> in Haskell to update the field named <code>i</code> in your state record (in our case this record is Game). Additionally, you can can have a field-update operator return the new value of field by prepending <code>&lt;</code>. This means the Haskell/lens equivalent of <code>x = ++i</code> is <code>x &lt;- i &lt;+= 1</code>. Finally, the field-update operator will return the value before update if you prepend <code>&lt;&lt;</code>, which makes <code>x &lt;- i &lt;&lt;+= 1</code> the Haskell/lens equivalent of <code>x = i++</code>.</p>
 <p>With these in hand, we can drop the first two <code>values</code> after we access them using <code>&lt;&lt;%=</code> instead of <code>%~</code> as we did in updateGame. This will remove the first two elements of <code>values</code> and return the list as it was before modification so we can extract the dropped values with pattern matching.</p>
