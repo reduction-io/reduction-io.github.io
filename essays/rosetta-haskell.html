@@ -1,0 +1,709 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="style.css" type="text/css" />
+  <link rel="stylesheet" href="pygments.css" type="text/css" />
+</head>
+<body>
+<h1 id="rosetta-haskell">Rosetta Haskell</h1>
+<h3 id="chas-leichner">Chas Leichner</h3>
+<p>It can be difficult at various stages of learning Haskell to see how the parts come together or how to use a particular abstraction. This reference exists to provide concrete Haskell examples through sequentially rewriting a program to do exactly the same thing using different techniques so that you can use your understanding of one code section to understand the new abstractions or techniques introduced in the next one. This is not intended as a Haskell tutorial in full, but it should answer questions <a href="https://github.com/bitemyapp/learnhaskell/blob/master/README.md">once you have them</a>. In addition, it is not intended as a primer for fancy type features and focuses more on term-level techniques in Haskell programming.</p>
+<p>All of these programs implement a basic question and answer game that generates a sequence of addition or subtraction problems with random operands between 0 and 100. If the user answers correctly, it prints &quot;Correct!&quot; Otherwise, it prints out a message followed by the correct answer. In addition, it keeps track of how many questions the user got right or wrong and displays this after every round. If you want to have a go at implementing this, I would strongly suggest doing so now.</p>
+<pre><code>An example interaction follows:
+Would you like to play? y/n: y
+What is 40 + 95 ? 135
+Correct!
+You have solved 1 out of 1
+Would you like to play? y/n: y
+What is 8 + 71 ? 79
+Correct!
+You have solved 2 out of 2
+Would you like to play? y/n: y
+What is 36 + 49 ? 30
+Sorry! the correct answer is: 85
+You have solved 2 out of 3
+Would you like to play? y/n: y
+What is 73 - 12 ? 85
+Sorry! the correct answer is: 61
+You have solved 2 out of 4
+Would you like to play? y/n: y
+What is 54 + 87 ? 141
+Correct!
+You have solved 3 out of 5
+Would you like to play? y/n: n</code></pre>
+<p>I think this is a good candidate for this sort of exercise because many new users find Haskell's treatments of non-termination, state, randomness, and user-interaction unintuitive and this program includes all of those while being simple enough that most people reading this shouldn't find the game logic confusing.</p>
+<p>Note: I don't think many of these examples are actually idiomatic Haskell. They are far more complicated than they need to be for such a simple program. The intent is to use these examples to understand more complex programming techniques and then apply those techniques to far lager and more complex programs. In addition, this exercise isn't meant to show off Haskell in particular, since basically any language or style in common usage will do a good job with a small, simple program. Instead, simplicity and familiarity of the program is meant as a point of stability and understanding as more complex tools are introduced.</p>
+<h2 id="java">Java</h2>
+<p>The first example is in Java to provide people with little or no Haskell experience a point of reference for what all of the other programs in this sequence do. Because this is intended as a starting point, anyone not already confident with basic Haskell programming should make sure they understand exactly what this program is doing before moving on.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">java.util.Random</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Scanner</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">RandomProblem</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">right</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="kt">int</span> <span class="n">rounds</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">Scanner</span> <span class="n">keyboard</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Scanner</span><span class="o">(</span><span class="n">System</span><span class="o">.</span><span class="na">in</span><span class="o">);</span>
+        <span class="n">Random</span> <span class="n">rand</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Random</span><span class="o">();</span>
+        <span class="k">while</span> <span class="o">(</span><span class="n">keepPlaying</span><span class="o">(</span><span class="n">keyboard</span><span class="o">))</span> <span class="o">{</span>
+            <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="na">nextInt</span><span class="o">(</span><span class="mi">100</span><span class="o">)</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+            <span class="kt">int</span> <span class="n">y</span> <span class="o">=</span> <span class="n">rand</span><span class="o">.</span><span class="na">nextInt</span><span class="o">(</span><span class="mi">100</span><span class="o">)</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+
+            <span class="kt">int</span> <span class="n">solution</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">rand</span><span class="o">.</span><span class="na">nextBoolean</span><span class="o">())</span> <span class="o">{</span>
+                <span class="n">solution</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+                <span class="n">printQuestion</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="sc">&#39;+&#39;</span><span class="o">,</span> <span class="n">y</span><span class="o">);</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="n">solution</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="o">;</span>
+                <span class="n">printQuestion</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="sc">&#39;-&#39;</span><span class="o">,</span> <span class="n">y</span><span class="o">);</span>
+            <span class="o">}</span>
+
+            <span class="n">rounds</span><span class="o">++;</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">solution</span> <span class="o">==</span> <span class="n">keyboard</span><span class="o">.</span><span class="na">nextInt</span><span class="o">())</span> <span class="o">{</span>
+                <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Correct!&quot;</span><span class="o">);</span>
+                <span class="n">right</span><span class="o">++;</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Sorry! the correct answer is: &quot;</span> <span class="o">+</span> <span class="n">solution</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;You have solved &quot;</span> <span class="o">+</span> <span class="n">right</span> <span class="o">+</span> <span class="s">&quot; out of &quot;</span> <span class="o">+</span>
+                               <span class="n">rounds</span> <span class="o">+</span> <span class="s">&quot; problems correctly.&quot;</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">keepPlaying</span><span class="o">(</span><span class="n">Scanner</span> <span class="n">keyboard</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">(</span><span class="s">&quot;Would you like to play? y/n: &quot;</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">keyboard</span><span class="o">.</span><span class="na">next</span><span class="o">().</span><span class="na">toLowerCase</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="s">&quot;y&quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">printQuestion</span><span class="o">(</span><span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">char</span> <span class="n">op</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">(</span><span class="s">&quot;What is &quot;</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="n">op</span> <span class="o">+</span> <span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="n">y</span> <span class="o">+</span> <span class="s">&quot;? &quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+<h2 id="haskell">Haskell</h2>
+<p>The Haskell implementation of this program demonstrates a very common pattern in functional programming in which a stateful computation with a loop is replaced by a function that calls itself with updated parameters. In the same way that each time through a loop the state variables reflect the previous executions of the loop body, each time the function is called the parameters it is called with reflect the previous executions of the function. This potentially infinite recursion isn't a problem in Haskell because it is such a common pattern that the runtime was written with it in mind.</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="n">values</span><span class="p">)</span> <span class="n">right</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="p">(</span><span class="n">map</span> <span class="n">toLower</span> <span class="n">keepPlaying</span> <span class="o">==</span> <span class="s">&quot;y&quot;</span><span class="p">)</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+
+    <span class="n">response</span> <span class="ow">&lt;-</span> <span class="n">readLn</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">solution</span> <span class="o">==</span> <span class="n">response</span>
+        <span class="kr">then</span> <span class="p">(</span><span class="n">right</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Correct!&quot;</span><span class="p">)</span>
+        <span class="kr">else</span> <span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">])</span>
+    <span class="n">putStrLn</span> <span class="o">$</span> <span class="n">unwords</span>
+      <span class="p">[</span><span class="n">message</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">total</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="p">(</span><span class="n">rounds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="n">gameLoop</span> <span class="n">values</span> <span class="n">total</span> <span class="p">(</span><span class="n">rounds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">putStr</span> <span class="n">s</span> <span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">gen</span> <span class="ow">&lt;-</span> <span class="n">getStdGen</span>
+  <span class="n">gameLoop</span> <span class="p">(</span><span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span> <span class="n">gen</span><span class="p">)</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+<p>This program is structured in two parts. In main, the first function called, I set up the initial state of the program and call <code>gameLoop</code> with the initial state. <code>gameLoop</code> has three stateful things it is concerned with: a sequence of random numbers to turn into problems, the number of questions that have been answered correctly, and the total number of questions asked. Each one of these values is then passed as a parameter to the <code>gameLoop</code> function, which is then updated when the function calls itself recursively after answering a question. There have been no questions answered and no questions asked at the start of the game, so right and rounds are both initialized to zero. The Java code gets random numbers from calling <code>nextInt</code> and <code>nextBoolean</code> repeatedly in order to get an infinite sequence of random numbers. In the Haskell version, I chose to create an infinite list of random values explicitly and pass it to the <code>gameLoop</code>. It can then remove values from the list using pattern matching and use them as needed. Laziness ensures that the program doesn't try to evaluate an infinite number of random values.</p>
+<p>The <code>flushPut</code> function is defined here to ensure that output from the function is immediately seen by the user and isn't buffered.</p>
+<p>If you are not comfortable with do-notation in Haskell: In the next few examples, anywhere that you see an expression like <code>val &lt;- ioVal</code>, the value on the right side (<code>ioVal</code>) has type <code>IO a</code> and the value on the left side (<code>val</code>) has type <code>a</code>. To make this concrete, in <code>keepPlaying &lt;- getLine</code>, <code>getLine</code> has type <code>IO String</code> and <code>keepPlaying</code> has type <code>String</code>. The way that do-notation and its related typeclass work ensures that you can't use it to write a function of type <code>IO a -&gt; a</code>, which would be a huge problem because you could use it to do IO anywhere, break a lot of programs, and confuse everyone. The value extraction with <code>&lt;-</code> works like that locally, but the type of the whole function most be of the form <code>a -&gt; ... -&gt; IO b</code> for some <code>b</code>. In these programs, <code>b</code> is always <code>()</code> which is used in Haskell the way <code>void</code> is used in Java. Stephen Diehl supplies more information <a href="http://dev.stephendiehl.com/hask/#do-notation">here</a> and <a href="http://dev.stephendiehl.com/hask/#monad-tutorials">here</a>. In addition, I will supply a de-sugared version of some of the programs so you can compare and see that it all boils down to function application.</p>
+<p>At many points in this document, I will specialized the types of various polymorphic functions in order to make them less abstract and thus easier to understand in context. By specialize, what I mean is replace type-level variables and typeclass instances with the specific types they are being used with which have the appropriate typeclass instances. For example, these are the polymorphic functions that do-notation desugars to:</p>
+<div class="highlight"><pre>    <span class="o">&gt;&gt;</span>  <span class="ow">::</span> <span class="kt">Monad</span> <span class="n">m</span> <span class="ow">=&gt;</span> <span class="n">m</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="n">b</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="n">b</span>
+    <span class="o">&gt;&gt;=</span> <span class="ow">::</span> <span class="kt">Monad</span> <span class="n">m</span> <span class="ow">=&gt;</span> <span class="n">m</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="n">a</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="n">b</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="n">b</span>
+</pre></div>
+<p>And these are their specialized types:</p>
+<div class="highlight"><pre>    <span class="o">&gt;&gt;</span>  <span class="ow">::</span> <span class="kt">IO</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="n">b</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="n">b</span>
+    <span class="o">&gt;&gt;=</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="n">b</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="n">b</span>
+</pre></div>
+<p>And these are the (slightly specialized) types of the functions that interact with <code>IO</code> and thus can be used with those functions:</p>
+<div class="highlight"><pre>    <span class="n">getLine</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="kt">String</span>
+    <span class="n">readLn</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="kt">Int</span>
+    <span class="n">putStrLn</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+    <span class="n">putStr</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+    <span class="n">hFlush</span> <span class="ow">::</span> <span class="kt">Handle</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+    <span class="n">stdout</span> <span class="ow">::</span> <span class="kt">Handle</span>
+</pre></div>
+<p>This is the same program without the syntactic sugar for do-notation.</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="n">values</span><span class="p">)</span> <span class="n">right</span> <span class="n">rounds</span> <span class="ow">=</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span> <span class="o">&gt;&gt;</span>
+  <span class="n">getLine</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">keepPlaying</span> <span class="ow">-&gt;</span>
+  <span class="n">when</span> <span class="p">(</span><span class="n">map</span> <span class="n">toLower</span> <span class="n">keepPlaying</span> <span class="o">==</span> <span class="s">&quot;y&quot;</span><span class="p">)</span> <span class="o">$</span>
+  <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span> <span class="kr">in</span>
+      <span class="n">flushPut</span> <span class="p">(</span><span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">])</span> <span class="o">&gt;&gt;</span>
+      <span class="n">readLn</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">response</span> <span class="ow">-&gt;</span>
+      <span class="kr">let</span> <span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">solution</span> <span class="o">==</span> <span class="n">response</span>
+          <span class="kr">then</span> <span class="p">(</span><span class="n">right</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Correct!&quot;</span><span class="p">)</span>
+          <span class="kr">else</span> <span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">])</span> <span class="kr">in</span>
+        <span class="n">putStrLn</span> <span class="p">(</span><span class="n">unwords</span>
+          <span class="p">[</span><span class="n">message</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">total</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="p">(</span><span class="n">rounds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span> <span class="o">&gt;&gt;</span>
+        <span class="n">gameLoop</span> <span class="n">values</span> <span class="n">total</span> <span class="p">(</span><span class="n">rounds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">putStr</span> <span class="n">s</span> <span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span>
+  <span class="n">getStdGen</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">gen</span> <span class="ow">-&gt;</span>
+  <span class="n">gameLoop</span> <span class="p">(</span><span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span> <span class="n">gen</span><span class="p">)</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+<h3 id="differences">Differences</h3>
+<pre><code>gameLoop (x:y:r:values) right rounds = do                                              | gameLoop (x:y:r:values) right rounds =
+  flushPut &quot;Would you like to play? y/n: &quot;                                             |   flushPut &quot;Would you like to play? y/n: &quot; &gt;&gt;
+  keepPlaying &lt;- getLine                                                               |   getLine &gt;&gt;= \keepPlaying -&gt;
+  when (map toLower keepPlaying == &quot;y&quot;) $ do                                           |   when (map toLower keepPlaying == &quot;y&quot;) $
+    let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)               |   let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2) in
+    flushPut $ unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]                        |       flushPut (unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]) &gt;&gt;
+                                                                                       |       readLn &gt;&gt;= \response -&gt;
+    response &lt;- readLn                                                                 |       let (total, message) = if solution == response
+    let (total, message) = if solution == response                                     |           then (right + 1, &quot;Correct!&quot;)
+        then (right + 1, &quot;Correct!&quot;)                                                   |           else (right, unwords [&quot;Sorry! the correct answer is:&quot;, show solution]) in
+        else (right, unwords [&quot;Sorry! the correct answer is:&quot;, show solution])         |         putStrLn (unwords
+    putStrLn $ unwords                                                                 |           [message, &quot;\nYou have solved&quot;, show total, &quot;out of&quot;, show (rounds + 1)]) &gt;&gt;
+      [message, &quot;\nYou have solved&quot;, show total, &quot;out of&quot;, show (rounds + 1)]          |         gameLoop values total (rounds + 1)
+    gameLoop values total (rounds + 1)                                                 &lt;
+main = do                                                                              | main =
+  gen &lt;- getStdGen                                                                     |   getStdGen &gt;&gt;= \gen -&gt;
+</code></pre>
+<h2 id="pointfree-and">Pointfree and <code>&lt;$&gt;</code></h2>
+<p>This next version introduces use of the <code>&lt;$&gt;</code> function. It can be thought of as a <code>$</code> (function application) function that has been modified to work in more circumstances. The <code>$</code> function performs <a href="https://stackoverflow.com/questions/19521246/what-does-mean-do-in-haskell">low-precedence function application</a> so that things like <code>even (x + 3)</code> can be replaced with <code>even $ x + 3</code>. It takes a function from <code>a -&gt; b</code> and an <code>a</code>, which produces a <code>b</code> by calling the function with the provided <code>a</code>.</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="n">values</span><span class="p">)</span> <span class="n">right</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+
+    <span class="n">correct</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">readLn</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">correct</span>
+        <span class="kr">then</span> <span class="p">(</span><span class="n">right</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Correct!&quot;</span><span class="p">)</span>
+        <span class="kr">else</span> <span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">])</span>
+    <span class="n">putStrLn</span> <span class="o">$</span> <span class="n">unwords</span>
+      <span class="p">[</span><span class="n">message</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">total</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="p">(</span><span class="n">rounds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="n">gameLoop</span> <span class="n">values</span> <span class="n">total</span> <span class="p">(</span><span class="n">rounds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
+  <span class="n">gameLoop</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+<h3 id="differences-1">Differences</h3>
+<pre><code>                                                                                       &gt; import Control.Applicative
+  keepPlaying &lt;- getLine                                                               |   keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; getLine
+  when (map toLower keepPlaying == &quot;y&quot;) $ do                                           |   when keepPlaying $ do
+    response &lt;- readLn                                                                 |     correct &lt;- (solution ==) &lt;$&gt; readLn
+    let (total, message) = if solution == response                                     |     let (total, message) = if correct
+    flushPut s = putStr s &gt;&gt; hFlush stdout                                             |     flushPut = (&gt;&gt; hFlush stdout) . putStr
+  gen &lt;- getStdGen                                                                     |   randomValues &lt;- randomRs (1,100) &lt;$&gt; getStdGen
+  gameLoop (randomRs (1, 100) gen) 0 0                                                 |   gameLoop randomValues 0 0
+</code></pre>
+<p>It is very common to want to operate on values &quot;inside&quot; of another type. So if we take a normal function, such as <code>even</code>, we can directly call it on numbers (as in <code>even 3</code>), but we can't call it on values that represent possible failure such as <code>Maybe Int</code> because the <code>Int</code> may be mising. We can achieve this by performing all of our logic &quot;inside&quot; the failure type <code>Maybe a</code>. Correctly operating &quot;inside&quot; of a type representing failure means that if the type passed to the function represents failure, the return value of the function also represents failure. In this case, we have a type of <code>Maybe Integer</code> and a function <code>even :: Integer -&gt; Bool</code> which doesn't know or care about the possibility of failure elsewhere in the system because <code>Integer</code> can't fail, it can only be even or not even. To complete the example, calling <code>even</code> on a possibly missing integer looks like <code>even &lt;$&gt; Just 3</code> or <code>even &lt;$&gt; Nothing</code> which evaluate to <code>Just False</code> and <code>Nothing</code> respectively.</p>
+<p>These are the types of the function application functions for reference:</p>
+<div class="highlight"><pre>    <span class="p">(</span> <span class="o">$</span> <span class="p">)</span> <span class="ow">::</span>              <span class="p">(</span><span class="n">a</span> <span class="ow">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="ow">-&gt;</span>   <span class="n">a</span> <span class="ow">-&gt;</span>   <span class="n">b</span>
+    <span class="p">(</span><span class="o">&lt;$&gt;</span><span class="p">)</span> <span class="ow">::</span> <span class="kt">Functor</span> <span class="n">f</span> <span class="ow">=&gt;</span> <span class="p">(</span><span class="n">a</span> <span class="ow">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="n">f</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="n">f</span> <span class="n">b</span>
+</pre></div>
+<p>In the case of <code>Maybe a</code>, operation &quot;inside&quot; the type means that you can take a function from <code>a</code> to <code>b</code> (<code>a -&gt; b</code>) and turn it into a function from <code>Maybe a</code> to <code>Maybe b</code> (<code>Maybe a -&gt; Maybe b</code>). <code>Maybe</code> can have two possible values, <code>Just a</code> and <code>Nothing</code>, so to implement this, the <code>&lt;$&gt;</code> function needs to return <code>Nothing</code> if the input is nothing, otherwise call the supplied function on the value held by <code>Just</code> and wrap it in a <code>Just</code>. <code>&lt;$&gt;</code> also goes by the name <code>fmap</code> and any type which has a <code>Functor</code> instance implements what <code>fmap (&lt;$&gt;)</code> means for that type. In short, if you use this machinery, Haskell will automate your null checks because the author of the <code>Maybe</code> type explained how to null-check in general.</p>
+<p>With that said, in this version of the code, I'm not doing anything particularly sophisticated using <code>&lt;$&gt;</code>. I'm mostly using it to clean up some of the noise around directly assigning values of type <code>IO a</code> to a variable just to extract the <code>a</code>, like in <code>keepPlaying &lt;- getLine</code>. To me, this seems kind of pointless, like it doesn't reflect the actual logic. What I was thinking when writing that was &quot;Check if the user input 'y'&quot;, not &quot;Get a line from the user. See if the keepPlaying variable contains 'y'&quot;. It's not a big difference, but I find it annoying.</p>
+<p>In this case, the type we are operating &quot;inside&quot; is <code>IO</code>, and <code>readLn</code>'s value is <code>IO Int</code> so we can reduce a bit of the noise that we pass to <code>when</code> by using <code>(&quot;y&quot; ==) . map toLower :: String -&gt; Bool</code> with <code>&lt;$&gt;</code> to call it with <code>IO String</code> to produce an <code>IO Bool</code>. After passing through the do-notation syntactic sugar, <code>keepPlaying</code> holds a Bool value, which can be passed to <code>when</code>. Similarly, we call (solution ==) with a value of <code>IO Int</code> to produce an <code>IO Bool</code> and then the <code>Bool</code> is extracted with <code>&lt;-</code>. If the process of using <code>&lt;-</code> to get at a <code>Bool</code> seems like a similar operation to working &quot;inside&quot; of types with <code>&lt;$&gt;</code>, this isn't a coincidence: there is a deep relationship between the <code>Functor</code> typeclass and the <code>Monad</code> typeclass, if you would like to dig in, the <a href="https://wiki.haskell.org/Typeclassopedia">Typeclassopedia</a> is probably the best place to start. (Bartosz Milewski does a good job giving <a href="https://bartoszmilewski.com/2016/11/21/monads-programmers-definition/">a taste of the theory</a> as well.)</p>
+<p>In my opinion, using <code>&lt;$&gt;</code> frequently makes code simpler by removing extraneous intermediate values and reflecting the view of functors as lifted function calls, but it can obscure meaning especially when using the functor instances for common containers.</p>
+<p>The other small style tweak I applied converted the <code>flushPut</code> function to so-called <a href="https://wiki.haskell.org/Pointfree">pointfree</a> form. Basically what this means is that I removed explicit mention of the variables passed to the function and expressed it entirely in terms of function composition. That is to say, I turned the function into a pipeline of components. As long as the pipeline isn't too complex, this can make functions clearer to read because you can be absolutely sure when reading them that they don't do anything fancy beyond plumbing their components together.</p>
+<p>This is a little bit complicated by the fact that <code>&gt;&gt;</code> is being partially applied to the value <code>hFlush stdout</code>, so <code>(&gt;&gt; hFlush stdout) :: IO () -&gt; IO ()</code> is composed with <code>putStr :: String -&gt; IO ()</code> to produce a function of type <code>(&gt;&gt; hFlush stdout) . putStr :: String -&gt; IO ()</code>.</p>
+<p>To specialize the type of the function composition function for this use, it looks like this: <code>(.) :: (IO () -&gt; IO ()) -&gt; (String -&gt; IO ()) -&gt; (String -&gt; IO ())</code>. What I mean is that if you look up the type of <code>(.)</code>, it is <code>(.) :: (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c</code> which means that <code>(.)</code> will work for any types that you choose for <code>a</code>, <code>b</code>, and <code>c</code>. It can sometimes be hard to understand the type signatures when they are presented in such generality so it can be useful to plug in the specific types that are in use in the particular situation of interest. In this instance <code>a</code> is <code>String</code>, <code>b</code> is <code>IO ()</code>, and <code>c</code> is <code>IO ()</code> so the type of the whole function is <code>(.) :: (IO () -&gt; IO ()) -&gt; (String -&gt; IO ()) -&gt; (String -&gt; IO ())</code>.</p>
+<pre><code>-    flushPut s = putStr s &gt;&gt; hFlush stdout
++    flushPut = (&gt;&gt; hFlush stdout) . putStr</code></pre>
+<p>Pointfree code can be simpler and easier to read, especially once you are familiar with the common idioms, but can obscure meaning when taken to an extreme.</p>
+<h2 id="state-record">State Record</h2>
+<p>In this version, I collected all of the state of a game into a single record, rather than passing in each parameter individually.</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="kr">data</span> <span class="kt">Game</span> <span class="ow">=</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="n">right</span> <span class="ow">::</span> <span class="kt">Int</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="p">}</span>
+
+<span class="nf">updateGame</span> <span class="ow">::</span> <span class="kt">Bool</span> <span class="ow">-&gt;</span> <span class="kt">Game</span> <span class="ow">-&gt;</span> <span class="kt">Game</span>
+<span class="nf">updateGame</span> <span class="n">correct</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="n">remaining</span><span class="p">)</span>
+                        <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="n">score</span>
+                        <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="p">}</span> <span class="ow">=</span>
+  <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">remaining</span>
+       <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">correct</span> <span class="kr">then</span> <span class="n">score</span> <span class="o">+</span> <span class="mi">1</span> <span class="kr">else</span> <span class="n">score</span>
+       <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">}</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="kt">Game</span> <span class="ow">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="n">gameState</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">values</span> <span class="n">gameState</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+
+    <span class="n">correct</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">readLn</span>
+    <span class="kr">let</span> <span class="n">gameState&#39;</span> <span class="ow">=</span> <span class="n">updateGame</span> <span class="n">correct</span> <span class="n">gameState</span>
+    <span class="n">putStrLn</span> <span class="o">$</span> <span class="kr">if</span> <span class="n">correct</span>
+        <span class="kr">then</span> <span class="s">&quot;Correct!&quot;</span>
+        <span class="kr">else</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">]</span>
+    <span class="n">putStr</span> <span class="o">$</span> <span class="n">unwords</span>
+      <span class="p">[</span><span class="s">&quot;You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">right</span> <span class="n">gameState&#39;</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span>
+                          <span class="n">show</span> <span class="o">$</span> <span class="n">rounds</span> <span class="n">gameState&#39;</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">]</span>
+    <span class="n">gameLoop</span> <span class="n">gameState&#39;</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
+  <span class="n">gameLoop</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">randomValues</span><span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span>  <span class="mi">0</span> <span class="p">}</span>
+</pre></div>
+<h3 id="differences-2">Differences</h3>
+<pre><code>gameLoop :: [Int] -&gt; Int -&gt; Int -&gt; IO ()                                               | data Game = Game { values :: [Int], right :: Int, rounds :: Int }
+gameLoop (x:y:r:values) right rounds = do                                              |
+                                                                                       &gt; updateGame :: Bool -&gt; Game -&gt; Game
+                                                                                       &gt; updateGame correct Game { values = (_:_:_:remaining)
+                                                                                       &gt;                         , right = score
+                                                                                       &gt;                         , rounds = total } =
+                                                                                       &gt;   Game { values = remaining
+                                                                                       &gt;        , right = if correct then score + 1 else score
+                                                                                       &gt;        , rounds = total + 1 }
+                                                                                       &gt;
+                                                                                       &gt; gameLoop :: Game -&gt; IO ()
+                                                                                       &gt; gameLoop gameState = do
+                                                                                       &gt;     let (x:y:r:_) = values gameState
+    let (total, message) = if correct                                                  |     let gameState&#39; = updateGame correct gameState
+        then (right + 1, &quot;Correct!&quot;)                                                   |     putStrLn $ if correct
+        else (right, unwords [&quot;Sorry! the correct answer is:&quot;, show solution])         |         then &quot;Correct!&quot;
+    putStrLn $ unwords                                                                 |         else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
+      [message, &quot;\nYou have solved&quot;, show total, &quot;out of&quot;, show (rounds + 1)]          |     putStr $ unwords
+    gameLoop values total (rounds + 1)                                                 |       [&quot;You have solved&quot;, show $ right gameState&#39;, &quot;out of&quot;,
+                                                                                       &gt;                           show $ rounds gameState&#39;, &quot;\n&quot;]
+                                                                                       &gt;     gameLoop gameState&#39;
+  gameLoop randomValues 0 0                                                            |   gameLoop Game { values = randomValues, right = 0, rounds =  0 }
+                                                                                       &gt;
+</code></pre>
+<p>This has the advantage of showing explicitly that the information passed to this function is all required for a single game, rather than coming from separate sources for separate aspects of the function. To follow this theme of concentrating state-specific code, I introduced an updateGame function which creates a new game record from an old one and the knowledge of whether the player won or lost.</p>
+<p>At this point, I think the machinery is starting to overwhelm the essential complexity of the problem and probably wouldn't write code like this for something so simple under other circumstances. It's generally a good idea to use records if you find yourself passing the same arguments to several functions in your program or if you are using tuples with some sort of implicit meaning e.g. as 2D vectors. They do have some syntactic overhead so I wouldn't normally use one for just one function like this.</p>
+<h2 id="statet">StateT</h2>
+<p>This section introduces Haskell's <code>State</code> type and associated <code>Monad</code> instance, as well as the <code>StateT</code> monad transformer. Using <code>StateT</code> removes the need to explicitly pass around the <code>Game</code> state variables as explicit function arguments while still giving access to <code>IO</code> operations.</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Control.Monad.State</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="kr">data</span> <span class="kt">Game</span> <span class="ow">=</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="n">right</span> <span class="ow">::</span> <span class="kt">Int</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="p">}</span>
+
+<span class="nf">updateGame</span> <span class="ow">::</span> <span class="kt">Bool</span> <span class="ow">-&gt;</span> <span class="kt">Game</span> <span class="ow">-&gt;</span> <span class="kt">Game</span>
+<span class="nf">updateGame</span> <span class="n">correct</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="n">remaining</span><span class="p">)</span>
+                        <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="n">score</span>
+                        <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="p">}</span> <span class="ow">=</span>
+  <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">remaining</span>
+       <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">correct</span> <span class="kr">then</span> <span class="n">score</span> <span class="o">+</span> <span class="mi">1</span> <span class="kr">else</span> <span class="n">score</span>
+       <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">}</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">gets</span> <span class="n">values</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+
+    <span class="n">correct</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">readLn</span>
+    <span class="n">modify</span> <span class="p">(</span><span class="n">updateGame</span> <span class="n">correct</span><span class="p">)</span>
+    <span class="n">gameState&#39;</span> <span class="ow">&lt;-</span> <span class="n">get</span>
+    <span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="kr">if</span> <span class="n">correct</span>
+      <span class="kr">then</span> <span class="s">&quot;Correct!&quot;</span>
+      <span class="kr">else</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">]</span>
+    <span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="n">unwords</span>
+      <span class="p">[</span><span class="s">&quot;You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">right</span> <span class="n">gameState&#39;</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span>
+                          <span class="n">show</span> <span class="o">$</span> <span class="n">rounds</span> <span class="n">gameState&#39;</span><span class="p">]</span>
+    <span class="n">gameLoop</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="n">liftIO</span> <span class="o">.</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
+  <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+<h3 id="differences-3">Differences</h3>
+<pre><code>                                                                                       &gt; import Control.Monad.State
+gameLoop :: Game -&gt; IO ()                                                              | gameLoop :: StateT Game IO ()
+gameLoop gameState = do                                                                | gameLoop = do
+  keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; getLine                                    |   keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; liftIO getLine
+    let (x:y:r:_) = values gameState                                                   |     (x:y:r:_) &lt;- gets values
+    correct &lt;- (solution ==) &lt;$&gt; readLn                                                |     correct &lt;- (solution ==) &lt;$&gt; liftIO readLn
+    let gameState&#39; = updateGame correct gameState                                      |     modify (updateGame correct)
+    putStrLn $ if correct                                                              |     gameState&#39; &lt;- get
+        then &quot;Correct!&quot;                                                                |     liftIO . putStrLn $ if correct
+        else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]                  |       then &quot;Correct!&quot;
+    putStr $ unwords                                                                   |       else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
+                                                                                       &gt;     liftIO . putStrLn $ unwords
+                          show $ rounds gameState&#39;, &quot;\n&quot;]                              |                           show $ rounds gameState&#39;]
+    gameLoop gameState&#39;                                                                |     gameLoop
+    flushPut = (&gt;&gt; hFlush stdout) . putStr                                             |     flushPut = liftIO . (&gt;&gt; hFlush stdout) . putStr
+  gameLoop Game { values = randomValues, right = 0, rounds =  0 }                      |   evalStateT gameLoop (Game randomValues 0 0)
+                                                                                       &gt;
+</code></pre>
+<p>Most interesting programs that involve interaction require some amount of state to persist throughout their execution. As we previously saw, we can thread this state through an unbounded number of recursive calls to the same function in order to simulate a persistent state using only stateless functions. It can be tedious to explicitly pass additional extraneous variables to each function that needs the state, but we can take advantage of the fact that do-nation is strictly syntactic sugar over the <code>&gt;&gt;=</code> operator from the Monad typeclass, and use it to thread our state record <code>Game</code> around for us. The type connected to the implicit passing of a state type is suitably called State.</p>
+<p>Previously, all do-notation was syntactic sugar for manipulation values of type <code>IO</code>. We would like to keep doing I/O in this program, so I don't want to <em>completely</em> replace the <code>IO</code> sugar with <code>State</code> sugar. Instead, I use a type called <code>StateT</code> to wrap the <code>IO</code> type and produce a <code>StateT Game IO ()</code>. After this conversion is done, the <code>gameLoop :: Game -&gt; IO ()</code> function no longer takes any explicit parameters and instead is a stateful value that holds a <code>Game</code> state and can perform I/O, to write it in Haskell: <code>gameLoop :: StateT Game IO ()</code>. <a href="http://book.realworldhaskell.org/read/monad-transformers.html">In larger applications several monad transformers are frequently stacked together.</a></p>
+<p>In general, the transformation from <code>IO</code> to <code>StateT Game IO</code> is extremely mechanical, I just added a <code>liftIO</code> function to each function that returns <code>IO</code> and made the types line up. The usual disclaimer about the low essential complexity of the problem applies here too. Using <code>State</code> and <code>StateT</code> to manage &quot;mutable&quot; state can be a good fit if you have a large number of functions that operate on the same state such a collection of parsing functions which update a shared symbol table. In addition, actual state mutation is available in the form of <a href="https://wiki.haskell.org/Monad/ST"><code>ST</code></a> if you want mutable state as a performance optimization. That said, implicitly passing state between functions can make them harder to understand, debug, and compose.</p>
+<p>Operations like <code>getLine</code> and <code>putStrLn</code> have types <code>IO String</code> and <code>String -&gt; IO ()</code> respectively and as such will not typecheck in an environment that expects values of type <code>StateT Game IO a</code> for some <code>a</code>. This is solved by using the <code>liftIO :: IO a -&gt; StateT Game IO a</code> function that transforms <code>IO</code>-related things into <code>StateT Game IO</code>-related things. Note: <code>liftIO</code> is quite general and should work with any number of wrappings, I'm only giving a specialized type here in order to make the transformation between <code>IO</code> types and <code>State</code>-wrapped <code>IO</code> type more explicit.</p>
+<p>Finally, because the type of <code>gameLoop</code> is <code>StateT Game IO ()</code>, it can't be called directly in <code>main :: IO ()</code>, and since the function is operating on an implicit state, it needs an initial state. The function <code>evalStateT :: Monad m =&gt; StateT s m a -&gt; s -&gt; m a</code> takes an initial state and supplies it to the stateful computation that it represents, which then converts it into the underlying monad: in this case, <code>IO</code>. Fully specialized, the function has the following type: <code>evalStateT :: StateT Game IO () -&gt; Game -&gt; IO ()</code>.</p>
+<p>To highlight particular parts of the conversion:</p>
+<pre><code>- correct &lt;- (solution ==) &lt;$&gt; readLn
++ correct &lt;- (solution ==) &lt;$&gt; liftIO readLn
+
+- putStrLn $ if correct
++ liftIO . putStrLn $ if correct
+
+- flushPut = (&gt;&gt; hFlush stdout) . putStr
++ flushPut = liftIO . (&gt;&gt; hFlush stdout) . putStr
+
+- gameLoop Game { values = randomValues, right = 0, rounds =  0 }
++ evalStateT gameLoop (Game randomValues 0 0)</code></pre>
+<p>This is the same program without the do-notation syntactic sugar.</p>
+<p>As a reminder, these are the specialized types of the desugared functions, used<br />
+in this example:</p>
+<div class="highlight"><pre>    <span class="o">&gt;&gt;</span>  <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">b</span> <span class="ow">-&gt;</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">b</span>
+    <span class="o">&gt;&gt;=</span> <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">b</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">b</span>
+    <span class="n">liftIO</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="n">a</span>
+    <span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="nb">()</span>
+</pre></div>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Control.Monad.State</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="kr">data</span> <span class="kt">Game</span> <span class="ow">=</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="n">right</span> <span class="ow">::</span> <span class="kt">Int</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="p">}</span>
+
+<span class="nf">updateGame</span> <span class="ow">::</span> <span class="kt">Bool</span> <span class="ow">-&gt;</span> <span class="kt">Game</span> <span class="ow">-&gt;</span> <span class="kt">Game</span>
+<span class="nf">updateGame</span> <span class="n">correct</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="n">remaining</span><span class="p">)</span>
+                        <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="n">score</span>
+                        <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="p">}</span> <span class="ow">=</span>
+  <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">remaining</span>
+       <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="o">+</span> <span class="mi">1</span>
+       <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">correct</span> <span class="kr">then</span> <span class="n">score</span> <span class="o">+</span> <span class="mi">1</span> <span class="kr">else</span> <span class="n">score</span> <span class="p">}</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="ow">=</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span> <span class="o">&gt;&gt;</span>
+  <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">getLine</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">keepPlaying</span> <span class="ow">-&gt;</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span>
+    <span class="n">gets</span> <span class="n">values</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">-&gt;</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span> <span class="kr">in</span>
+      <span class="n">flushPut</span> <span class="p">(</span><span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">])</span> <span class="o">&gt;&gt;</span>
+
+      <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">readLn</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">correct</span> <span class="ow">-&gt;</span>
+      <span class="n">modify</span> <span class="p">(</span><span class="n">updateGame</span> <span class="n">correct</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">get</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">game</span> <span class="ow">-&gt;</span>
+      <span class="p">(</span><span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span><span class="p">)</span> <span class="p">(</span><span class="n">unwords</span> <span class="p">[</span><span class="n">message</span> <span class="n">solution</span> <span class="n">correct</span><span class="p">,</span>
+        <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">right</span> <span class="n">game</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">rounds</span> <span class="n">game</span><span class="p">])</span> <span class="o">&gt;&gt;</span>
+      <span class="n">gameLoop</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="n">liftIO</span> <span class="o">.</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+    <span class="n">message</span> <span class="kr">_</span> <span class="kt">True</span> <span class="ow">=</span> <span class="s">&quot;Correct!&quot;</span>
+    <span class="n">message</span> <span class="n">solution</span> <span class="kr">_</span> <span class="ow">=</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">]</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span>
+  <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span> <span class="o">&gt;&gt;=</span> <span class="nf">\</span><span class="n">randomValues</span> <span class="ow">-&gt;</span>
+  <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">randomValues</span><span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="mi">0</span> <span class="p">}</span>
+</pre></div>
+<h3 id="differences-4">Differences</h3>
+<pre><code>       , right = if correct then score + 1 else score                                  |        , rounds = total + 1
+       , rounds = total + 1 }                                                          |        , right = if correct then score + 1 else score }
+gameLoop = do                                                                          | gameLoop =
+  flushPut &quot;Would you like to play? y/n: &quot;                                             |   flushPut &quot;Would you like to play? y/n: &quot; &gt;&gt;
+  keepPlaying &lt;- (&quot;y&quot; ==) . map toLower &lt;$&gt; liftIO getLine                             |   (&quot;y&quot; ==) . map toLower &lt;$&gt; liftIO getLine &gt;&gt;= \keepPlaying -&gt;
+  when keepPlaying $ do                                                                |   when keepPlaying $
+    (x:y:r:_) &lt;- gets values                                                           |     gets values &gt;&gt;= \(x:y:r:_) -&gt;
+    let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)               |     let (solution, opStr) = [(x + y, &quot;+&quot;), (x - y, &quot;-&quot;)] !! (r `mod` 2) in
+    flushPut $ unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]                        |       flushPut (unwords [&quot;What is&quot;, show x, opStr, show y, &quot;? &quot;]) &gt;&gt;
+    correct &lt;- (solution ==) &lt;$&gt; liftIO readLn                                         |       (solution ==) &lt;$&gt; liftIO readLn &gt;&gt;= \correct -&gt;
+    modify (updateGame correct)                                                        |       modify (updateGame correct) &gt;&gt; get &gt;&gt;= \game -&gt;
+    gameState&#39; &lt;- get                                                                  |       (liftIO . putStrLn) (unwords [message solution correct,
+    liftIO . putStrLn $ if correct                                                     |         &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]) &gt;&gt;
+      then &quot;Correct!&quot;                                                                  |       gameLoop
+      else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]                    &lt;
+    liftIO . putStrLn $ unwords                                                        &lt;
+      [&quot;You have solved&quot;, show $ right gameState&#39;, &quot;out of&quot;,                           &lt;
+                          show $ rounds gameState&#39;]                                    &lt;
+    gameLoop                                                                           &lt;
+                                                                                       &gt;     message _ True = &quot;Correct!&quot;
+                                                                                       &gt;     message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
+main = do                                                                              | main =
+  randomValues &lt;- randomRs (1,100) &lt;$&gt; getStdGen                                       |   randomRs (1,100) &lt;$&gt; getStdGen &gt;&gt;= \randomValues -&gt;
+  evalStateT gameLoop (Game randomValues 0 0)                                          |   evalStateT gameLoop Game { values = randomValues, right = 0, rounds = 0 }
+</code></pre>
+<h2 id="statet-clean-up"><code>StateT</code> Clean-up</h2>
+<p>This is another minor clean-up version, but shows a couple of common (and not particularly arcane) practices.</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Control.Monad.State</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="kr">data</span> <span class="kt">Game</span> <span class="ow">=</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="n">right</span> <span class="ow">::</span> <span class="kt">Int</span><span class="p">,</span> <span class="n">rounds</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="p">}</span>
+
+<span class="nf">updateGame</span> <span class="ow">::</span> <span class="kt">Bool</span> <span class="ow">-&gt;</span> <span class="kt">Game</span> <span class="ow">-&gt;</span> <span class="kt">Game</span>
+<span class="nf">updateGame</span> <span class="n">correct</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="kr">_</span><span class="kt">:</span><span class="n">remaining</span><span class="p">)</span>
+                        <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="n">score</span>
+                        <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="p">}</span> <span class="ow">=</span>
+  <span class="kt">Game</span> <span class="p">{</span> <span class="n">values</span> <span class="ow">=</span> <span class="n">remaining</span>
+       <span class="p">,</span> <span class="n">rounds</span> <span class="ow">=</span> <span class="n">total</span> <span class="o">+</span> <span class="mi">1</span>
+       <span class="p">,</span> <span class="n">right</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">correct</span> <span class="kr">then</span> <span class="n">score</span> <span class="o">+</span> <span class="mi">1</span> <span class="kr">else</span> <span class="n">score</span> <span class="p">}</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">gets</span> <span class="n">values</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+
+    <span class="n">correct</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">readLn</span>
+    <span class="n">game</span> <span class="ow">&lt;-</span> <span class="n">modify</span> <span class="p">(</span><span class="n">updateGame</span> <span class="n">correct</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">get</span>
+    <span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="n">message</span> <span class="n">solution</span> <span class="n">correct</span><span class="p">,</span>
+      <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">right</span> <span class="n">game</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">rounds</span> <span class="n">game</span><span class="p">]</span>
+    <span class="n">gameLoop</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="n">liftIO</span> <span class="o">.</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+    <span class="n">message</span> <span class="kr">_</span> <span class="kt">True</span> <span class="ow">=</span> <span class="s">&quot;Correct!&quot;</span>
+    <span class="n">message</span> <span class="n">solution</span> <span class="kr">_</span> <span class="ow">=</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">]</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
+  <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+<h3 id="differences-5">Differences</h3>
+<pre><code>       , right = if correct then score + 1 else score                                  |        , rounds = total + 1
+       , rounds = total + 1 }                                                          |        , right = if correct then score + 1 else score }
+    let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)               |     let (solution, opStr) = [(x + y, &quot;+&quot;), (x - y, &quot;-&quot;)] !! (r `mod` 2)
+    modify (updateGame correct)                                                        |     game &lt;- modify (updateGame correct) &gt;&gt; get
+    gameState&#39; &lt;- get                                                                  |     liftIO . putStrLn $ unwords [message solution correct,
+    liftIO . putStrLn $ if correct                                                     |       &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]
+      then &quot;Correct!&quot;                                                                  &lt;
+      else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]                    &lt;
+    liftIO . putStrLn $ unwords                                                        &lt;
+      [&quot;You have solved&quot;, show $ right gameState&#39;, &quot;out of&quot;,                           &lt;
+                          show $ rounds gameState&#39;]                                    &lt;
+                                                                                       &gt;     message _ True = &quot;Correct!&quot;
+                                                                                       &gt;     message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
+</code></pre>
+<p>I extracted a function from the if-expression because I think it's a bit more straightforward and compact and does a better job of breaking up the logical portion of the program.</p>
+<pre><code>- liftIO . putStrLn $ if correct
+-     then &quot;Correct!&quot;
+-     else unwords [&quot;Sorry! the correct answer is:&quot;, show solution]
++ liftIO . putStrLn $ unwords [message solution correct,
+
++ message _ True = &quot;Correct!&quot;
++ message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]</code></pre>
+<p>I also compacted the the two lines where I update the game state into one as follows:</p>
+<pre><code>- modify (updateGame correct)
+- gameState&#39; &lt;- get
++ game &lt;- modify (updateGame correct) &gt;&gt; get</code></pre>
+<p>Normally, the <code>&gt;&gt;</code> operator is hidden behind the syntactic sugar provided by do-notation and indeed it is inserted between these two operations in the previous version. You can tell because <code>modify</code> doesn't name its result using <code>&lt;-</code> and <code>get</code> doesn't take any parameters beyond its shared state.<br />
+I chose to make this explicit rather than using the do-notation sugar to reflect the fact that I really want a state update operation that returns the new state because I want to keep computing with the new state locally even after modifying it.</p>
+<p><code>&gt;&gt;</code> is an operator that sequences operations while retaining the behavior encoded by do-notation. To understand what this means, remember that <code>do { x &lt;- foo; bar x }</code> desugars to <code>foo &gt;&gt;= \x -&gt; bar x</code>, but since there are no variable bindings, <code>do { baz; qux }</code> desugars to <code>baz &gt;&gt;= \_ -&gt; qux</code>, which is the same as <code>baz &gt;&gt; qux</code>. Since <code>&gt;&gt;=</code> is a method of the <code>Monad</code> type class, it has a different meaning for each type class instance. In this case <code>&gt;&gt;=</code> is auto-connecting an implicit state parameter so &gt;&gt; just runs two operations where the second operation doesn't depend on the result of the first, but the second operation does see any modifications the first operation made to their shared state. In this context the type of <code>&gt;&gt;</code> is <code>(&gt;&gt;) :: StateT Game IO () -&gt; StateT Game IO Game -&gt; StateT Game IO Game</code> which is <code>() -&gt; Game -&gt; Game</code> lifted to respect the structure of <code>StateT Game IO</code>.</p>
+<h1 id="lens"><code>lens</code></h1>
+<p>This section introduces the use of a lens library, Control.Lens -- henceforth known as <code>lens</code>, which provides utility functions for manipulating data in a composable and generic way. If you have used the STL in C++, lens fits in a similar niche. Unlike the STL, it isn't standardized or official in any way with Haskell, it's just a library many people (including myself) like.</p>
+<div class="highlight"><pre><span class="cm">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Lens</span> <span class="k">hiding</span> <span class="p">(</span><span class="nf">op</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Control.Monad.State</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="kr">data</span> <span class="kt">Game</span> <span class="ow">=</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">_values</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="n">_right</span> <span class="ow">::</span> <span class="kt">Int</span><span class="p">,</span> <span class="n">_rounds</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="p">}</span>
+<span class="nf">makeLenses</span> <span class="kt">&#39;&#39;Game</span>
+
+<span class="nf">updateGame</span> <span class="ow">::</span> <span class="kt">Bool</span> <span class="ow">-&gt;</span> <span class="kt">Game</span> <span class="ow">-&gt;</span> <span class="kt">Game</span>
+<span class="nf">updateGame</span> <span class="n">correct</span> <span class="ow">=</span>
+    <span class="p">(</span><span class="n">values</span> <span class="o">%~</span> <span class="n">drop</span> <span class="mi">3</span><span class="p">)</span> <span class="o">.</span>
+    <span class="p">(</span><span class="n">rounds</span> <span class="o">+~</span> <span class="mi">1</span><span class="p">)</span> <span class="o">.</span>
+    <span class="p">(</span><span class="n">right</span> <span class="o">+~</span> <span class="kr">if</span> <span class="n">correct</span> <span class="kr">then</span> <span class="mi">1</span> <span class="kr">else</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">use</span> <span class="n">values</span>
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+
+    <span class="n">correct</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">readLn</span>
+    <span class="n">game</span> <span class="ow">&lt;-</span> <span class="n">modify</span> <span class="p">(</span><span class="n">updateGame</span> <span class="n">correct</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">get</span>
+    <span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="n">message</span> <span class="n">solution</span> <span class="n">correct</span><span class="p">,</span>
+      <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">game</span> <span class="o">^.</span> <span class="n">right</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="o">$</span> <span class="n">game</span> <span class="o">^.</span> <span class="n">rounds</span><span class="p">]</span>
+    <span class="n">gameLoop</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="n">liftIO</span> <span class="o">.</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+    <span class="n">message</span> <span class="kr">_</span> <span class="kt">True</span> <span class="ow">=</span> <span class="s">&quot;Correct!&quot;</span>
+    <span class="n">message</span> <span class="n">solution</span> <span class="kr">_</span> <span class="ow">=</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">solution</span><span class="p">]</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
+  <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+<h3 id="differences-6">Differences</h3>
+<pre><code>                                                                                       &gt; {-# LANGUAGE TemplateHaskell #-}
+                                                                                       &gt; import Control.Lens hiding (op)
+data Game = Game { values :: [Int], right :: Int, rounds :: Int }                      | data Game = Game { _values :: [Int], _right :: Int, _rounds :: Int }
+                                                                                       &gt; makeLenses &#39;&#39;Game
+updateGame correct Game { values = (_:_:_:remaining)                                   | updateGame correct =
+                        , right = score                                                |     (values %~ drop 3) .
+                        , rounds = total } =                                           |     (rounds +~ 1) .
+  Game { values = remaining                                                            |     (right +~ if correct then 1 else 0)
+       , rounds = total + 1                                                            &lt;
+       , right = if correct then score + 1 else score }                                &lt;
+    (x:y:r:_) &lt;- gets values                                                           |     (x:y:r:_) &lt;- use values
+    let (solution, opStr) = [(x + y, &quot;+&quot;), (x - y, &quot;-&quot;)] !! (r `mod` 2)                |     let (solution, opStr) = [(x + y, &quot;+&quot;) , (x - y, &quot;-&quot;)] !! (r `mod` 2)
+      &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]            |       &quot;\nYou have solved&quot;, show $ game ^. right, &quot;out of&quot;, show $ game ^. rounds]
+                                                                                       &lt;
+</code></pre>
+<p>All of the functions provided by <a href="https://hackage.haskell.org/package/lens"><code>lens</code></a> work using a type of generalized getter/setter functions called lenses. (Note: If this idea is interesting to you, but you don't want all of the bells and whistles in <code>lens</code>, there are other, simpler lens libraries that use the same representation as <code>lens</code>, such as <a href="https://hackage.haskell.org/package/lens-family"><code>lens-family</code></a>.) Lenses are extremely mechanical to produce for standard data types, so it includes some Template Haskell functions which will write them for you. Normally Haskell provides projection functions when you write a record which are named after the record fields (e.g. <code>rounds :: Game -&gt; Int</code>), so we start the names of record members with underscores so generated lenses won't conflict.</p>
+<p>After converting to using lenses for field access, anything that touched the game state needs to be rewritten to use the new combinators. I think this does simplify the updateGame function, but the logic around printing becomes slightly worse.</p>
+<p>The updateGame function previously used pattern matching to take apart the Game value and put it back together again. The version using lenses instead constructs three modification functions of type <code>Game -&gt; Game</code> and composes them together using <code>.</code> (This is the same pipeline technique that was discussed in the context of flushPut). What goes into updateGame? We need to remove the first two random values because they were used for the last problem, we need to unconditionally increment the number of rounds, and if the user got the last problem correct, we should increment the number right. Let's look at each part separately because we know they don't interact due to their construction as composed functions.</p>
+<p>The crux of updating <code>values</code> is the <code>%~</code> operator. This takes a lens and a function and creates a function that takes a record and modifies one of its fields using the provided function. The operator's function can be remembered as a pun on the common use of <code>%</code> as the mod (or modular arithmetic) operator. To look at this concretely, in this instance <code>%~</code> has type:</p>
+<pre><code>(%~) :: Lens&#39; Game [Int] -&gt; ([Int] -&gt; [Int]) -&gt; (Game -&gt; Game)</code></pre>
+<p>We can use the <code>values</code> lens that makeLenses built to satisfy the (Lens' Game [Int]) parameter leaving:</p>
+<pre><code>(values %~) :: ([Int] -&gt; [Int]) -&gt; (Game -&gt; Game)</code></pre>
+<p>We want to remove the first two elements of the infinite list of random values so the ([Int] -&gt; [Int]) parameter should be <code>drop 2 :: [a] -&gt; [a]</code> which will specialize to <code>drop 2 :: [Int] -&gt; [Int]</code> when used with lists of <code>Int</code>s. Supplying the modification function produces the following:</p>
+<pre><code>(values %~ drop 2) :: Game -&gt; Game</code></pre>
+<p>This is precisely a Game state update function which removes the first two entries in the <code>values</code> list. If you aren't into the operator business, <code>%~</code> also goes by the name <code>over</code> so the previous function could be written <code>over values (drop 2)</code>.</p>
+<p>By this logic, the function for updating the <code>rounds</code> could look like this, where the modification function is an increment function constructed through partial application of addition.</p>
+<pre><code>(rounds %~ (+1)) :: Game -&gt; Game</code></pre>
+<p>This is a bit cluttered and likely very common, so <code>lens</code> provides the <code>+~</code> combinator that lets you modify a field by adding a number. (Its name should evoke the += operator from many imperative programming languages.) Using this the rounds update can be written as</p>
+<pre><code>(rounds +~ 1) :: Game -&gt; Game</code></pre>
+<p>There isn't a named analog for <code>+~</code> so if you don't like the <code>lens</code> operators, this would be <code>over rounds (+1)</code>.</p>
+<p>Finally the number right can be updated using a variation on the same logic using the <code>correct :: Bool</code> parameter passed into the updateGame function.</p>
+<pre><code>(right +~ if correct then 1 else 0)</code></pre>
+<p>Composing these together gives the complete updateGame function using lenses:</p>
+<pre><code>+ updateGame :: Bool -&gt; Game -&gt; Game
++ updateGame correct =
++     (values %~ drop 2) .
++     (rounds +~ 1) .
++     (right +~ if correct then 1 else 0)
+- updateGame :: Bool -&gt; Game -&gt; Game
+- updateGame correct Game { values = (\_:\_:\_:remaining)
+-                         , right = score
+-                         , rounds = total } =
+-   Game { values = remaining
+-        , rounds = total + 1
+-        , right = if correct then score + 1 else score }</code></pre>
+<p>Next, <code>gets :: (Game -&gt; a) -&gt; StateT Game IO a</code>, which used the <code>values :: Game -&gt; [Int]</code> projection function, is replaced with <code>use :: Lens' Game a -&gt; StateT Game IO a</code> which uses the <code>values :: Lens' Game [Int]</code> lens to get the values out of the state. These have precisely the same result, namely a value of type <code>StateT Game IO [Int]</code>.</p>
+<pre><code>- (x:y:r:\_) &lt;- gets values
++ (x:y:r:\_) &lt;- use values</code></pre>
+<p>Finally, since lenses aren't projection functions, we have to update the message printing code as well. This is slightly more straightforward than in the case of use and get, because <code>lens</code> provides an operator for turning lenses into projection functions, <code>(^.) :: s -&gt; Lens' s a -&gt; a</code> or, specialized for this instance, <code>(^.) :: Game -&gt; Lens' Game Int -&gt; Int</code>. If you squint a bit, you can see that applying a lens for a <code>Game</code> field to the second argument will give you a function <code>Game -&gt; Int</code> which is just a normal projection function. In this case <code>show $ right game</code> can be replaced with <code>show $ game ^. right</code> or <code>show $ view game right</code>, if you don't like the operators. In total, this leads to the following change:</p>
+<pre><code>- liftIO . putStrLn $ unwords [message solution correct,
+-   &quot;\nYou have solved&quot;, show $ right game, &quot;out of&quot;, show $ rounds game]
++ liftIO . putStrLn $ unwords [message solution correct,
++   &quot;\nYou have solved&quot;, show $ game ^. right, &quot;out of&quot;, show $ game ^. rounds]</code></pre>
+<p>In summary for this section, introducing <code>lens</code> made the updateGame function slightly less verbose, but we didn't get any big wins. We'll see what this did for us once we make more use of the utility functions lens provides and have slightly more complex states to wrangle.</p>
+<h1 id="lens-with-statet"><code>lens</code> with <code>StateT</code></h1>
+<p>The combination of StateT and lens gives us the ability to easily directly modify the Game state using similar looking operations to imperative languages, in this version, we remove the use of <code>modify</code> and <code>updateGame</code>.</p>
+<div class="highlight"><pre><span class="cm">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="kr">import</span> <span class="nn">Control.Applicative</span>
+<span class="kr">import</span> <span class="nn">Control.Lens</span> <span class="k">hiding</span> <span class="p">(</span><span class="nf">op</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Control.Monad</span>
+<span class="kr">import</span> <span class="nn">Control.Monad.State</span>
+<span class="kr">import</span> <span class="nn">Data.Char</span>
+<span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="kr">import</span> <span class="nn">System.Random</span>
+
+<span class="kr">data</span> <span class="kt">Game</span> <span class="ow">=</span> <span class="kt">Game</span> <span class="p">{</span> <span class="n">_values</span> <span class="ow">::</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="n">_right</span> <span class="ow">::</span> <span class="kt">Int</span><span class="p">,</span> <span class="n">_rounds</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="p">}</span>
+<span class="nf">makeLenses</span> <span class="kt">&#39;&#39;Game</span>
+
+<span class="nf">gameLoop</span> <span class="ow">::</span> <span class="kt">StateT</span> <span class="kt">Game</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">gameLoop</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">flushPut</span> <span class="s">&quot;Would you like to play? y/n: &quot;</span>
+  <span class="n">keepPlaying</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="s">&quot;y&quot;</span> <span class="o">==</span><span class="p">)</span> <span class="o">.</span> <span class="n">map</span> <span class="n">toLower</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">getLine</span>
+  <span class="n">when</span> <span class="n">keepPlaying</span> <span class="o">$</span> <span class="kr">do</span>
+    <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">y</span><span class="kt">:</span><span class="n">r</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">values</span> <span class="o">&lt;&lt;%=</span> <span class="n">drop</span> <span class="mi">3</span>
+    <span class="n">numRounds</span> <span class="ow">&lt;-</span> <span class="n">rounds</span> <span class="o">&lt;+=</span> <span class="mi">1</span>
+
+    <span class="kr">let</span> <span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">opStr</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;+&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;-&quot;</span><span class="p">)]</span> <span class="o">!!</span> <span class="p">(</span><span class="n">r</span> <span class="p">`</span><span class="n">mod</span><span class="p">`</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">flushPut</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;What is&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">x</span><span class="p">,</span> <span class="n">opStr</span><span class="p">,</span> <span class="n">show</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;? &quot;</span><span class="p">]</span>
+    <span class="n">correct</span> <span class="ow">&lt;-</span> <span class="p">(</span><span class="n">solution</span> <span class="o">==</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">liftIO</span> <span class="n">readLn</span>
+    <span class="n">numRight</span> <span class="ow">&lt;-</span> <span class="n">right</span> <span class="o">&lt;+=</span> <span class="kr">if</span> <span class="n">correct</span> <span class="kr">then</span> <span class="mi">1</span> <span class="kr">else</span> <span class="mi">0</span>
+
+    <span class="n">liftIO</span> <span class="o">.</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="n">unwords</span> <span class="p">[</span><span class="n">message</span> <span class="n">solution</span> <span class="n">correct</span><span class="p">,</span>
+      <span class="s">&quot;</span><span class="se">\n</span><span class="s">You have solved&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">numRight</span><span class="p">,</span> <span class="s">&quot;out of&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">numRounds</span><span class="p">]</span>
+    <span class="n">gameLoop</span>
+  <span class="kr">where</span>
+    <span class="n">flushPut</span> <span class="ow">=</span> <span class="n">liftIO</span> <span class="o">.</span> <span class="p">(</span><span class="o">&gt;&gt;</span> <span class="n">hFlush</span> <span class="n">stdout</span><span class="p">)</span> <span class="o">.</span> <span class="n">putStr</span>
+    <span class="n">message</span> <span class="kr">_</span> <span class="kt">True</span> <span class="ow">=</span> <span class="s">&quot;Correct!&quot;</span>
+    <span class="n">message</span> <span class="n">soln</span> <span class="kr">_</span> <span class="ow">=</span> <span class="n">unwords</span> <span class="p">[</span><span class="s">&quot;Sorry! the correct answer is:&quot;</span><span class="p">,</span> <span class="n">show</span> <span class="n">soln</span><span class="p">]</span>
+
+<span class="nf">main</span> <span class="ow">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">randomValues</span> <span class="ow">&lt;-</span> <span class="n">randomRs</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">getStdGen</span>
+  <span class="n">evalStateT</span> <span class="n">gameLoop</span> <span class="p">(</span><span class="kt">Game</span> <span class="n">randomValues</span> <span class="mi">0</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+<h3 id="differences-7">Differences</h3>
+<pre><code>updateGame :: Bool -&gt; Game -&gt; Game                                                     &lt;
+updateGame correct =                                                                   &lt;
+    (values %~ drop 3) .                                                               &lt;
+    (rounds +~ 1) .                                                                    &lt;
+    (right +~ if correct then 1 else 0)                                                &lt;
+                                                                                       &lt;
+    (x:y:r:_) &lt;- use values                                                            |     (x:y:r:_) &lt;- values &lt;&lt;%= drop 3
+                                                                                       &gt;     numRounds &lt;- rounds &lt;+= 1
+                                                                                       &gt;
+                                                                                       &lt;
+    game &lt;- modify (updateGame correct) &gt;&gt; get                                         |     numRight &lt;- right &lt;+= if correct then 1 else 0
+                                                                                       &gt;
+      &quot;\nYou have solved&quot;, show $ game ^. right, &quot;out of&quot;, show $ game ^. rounds]      |       &quot;\nYou have solved&quot;, show numRight, &quot;out of&quot;, show numRounds]
+    message solution _ = unwords [&quot;Sorry! the correct answer is:&quot;, show solution]      |     message soln _ = unwords [&quot;Sorry! the correct answer is:&quot;, show soln]
+                                                                                       &gt;
+</code></pre>
+<p>This approach explicitly states what can be manipulated and centralizes it into one type like in traditional (or more explicit) programming with stateless functions, but it uses Haskell library features to implicitly update the state as it's passed around.</p>
+<p>Understanding the new code requires knowing two more pieces of lens operator grammar: just as any stateless update operator ends in <code>~</code>, stateful update operators end in <code>=</code> and update an ambient state. In our case this state type is <code>StateT Game IO ()</code>. What this means is that if you would write <code>i += 1</code> to update the value of a variable in an imperative language, you can use <code>i += 1</code> in Haskell to update the field named <code>i</code> in your state record (in our case this record is Game). Additionally, you can can have a field-update operator return the new value of field by prepending <code>&lt;</code>. This means the Haskell/lens equivalent of <code>x = ++i</code> is <code>x &lt;- i &lt;+= 1</code>. Finally, the field-update operator will return the value before update if you prepend <code>&lt;&lt;</code>, which makes <code>x &lt;- i &lt;&lt;+= 1</code> the Haskell/lens equivalent of <code>x = i++</code>.</p>
+<p>With these in hand, we can drop the first two <code>values</code> after we access them using <code>&lt;&lt;%=</code> instead of <code>%~</code> as we did in updateGame. This will remove the first two elements of <code>values</code> and return the list as it was before modification so we can extract the dropped values with pattern matching.</p>
+<pre><code>(x:y:r:_) &lt;- values &lt;&lt;%= drop 3</code></pre>
+<p>The rounds and <code>right</code> fields again use the same technique, but we replace <code>+~</code> with <code>&lt;+=</code> so that we update the ambient <code>Game</code> state, and get the new values for use in local computation.</p>
+<pre><code>numRounds &lt;- rounds &lt;+= 1
+numRight &lt;- right &lt;+= if correct then 1 else 0</code></pre>
+<p>Since we can directly name the results of these updates, we can then remove the need to access the fields out of the updated game state and just use the results directly instead.</p>
+<pre><code>- liftIO . putStrLn $ unwords [message solution correct,
+-     &quot;\nYou have solved&quot;, show $ game ^. right, &quot;out of&quot;, show $ game ^. rounds]
++ liftIO . putStrLn $ unwords [message solution correct,
++     &quot;\nYou have solved&quot;, show numRight, &quot;out of&quot;, show numRounds]</code></pre>
+<p>This means that if at any point you want to understand the operation of the function for testing or debugging, you can still provide the appropriate state record and know that you have specified all of the information it depends on, but you don't have to worry about tracking these dependencies during other parts of development. That said you now have a stateful bummer to deal with, so use this stuff carefully.</p>
+</body>
+</html>
