@@ -1,5 +1,5 @@
 p {
-  max-width: 36rem;
+  max-width: 42rem;
   line-height: 1.45;
 }
 
@@ -9,6 +9,6 @@ code, pre {
 
 body {
   color: #333;
-  width: 36rem;
+  width: 42rem;
   margin: 0 auto;
 }
